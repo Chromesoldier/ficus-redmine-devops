@@ -29,7 +29,8 @@ resource "random_password" "db" {
 }
 
 resource "aws_secretsmanager_secret" "db" {
-  name = "${local.name}/db"
+  name                    = "${local.name}/db"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db" {
@@ -158,6 +159,41 @@ resource "aws_security_group" "rds" {
   }
 
   tags = { Name = "${local.name}-rds-sg" }
+}
+
+resource "aws_security_group" "efs" {
+  name   = "${local.name}-efs-sg"
+  vpc_id = aws_vpc.this.id
+
+  ingress {
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${local.name}-efs-sg" }
+}
+
+resource "aws_efs_file_system" "redmine" {
+  creation_token = "${local.name}-efs"
+  encrypted      = true
+
+  tags = { Name = "${local.name}-efs" }
+}
+
+resource "aws_efs_mount_target" "redmine" {
+  count           = 2
+  file_system_id  = aws_efs_file_system.redmine.id
+  subnet_id       = aws_subnet.private[count.index].id
+  security_groups = [aws_security_group.efs.id]
 }
 
 # --------------------------
@@ -304,6 +340,16 @@ resource "aws_ecs_task_definition" "redmine" {
 
   execution_role_arn = aws_iam_role.ecs_task_execution.arn
 
+  volume {
+    name = "redmine-files"
+
+    efs_volume_configuration {
+      file_system_id     = aws_efs_file_system.redmine.id
+      transit_encryption = "ENABLED"
+      root_directory     = "/"
+    }
+  }
+
   container_definitions = jsonencode([
     {
       name      = "redmine"
@@ -312,6 +358,14 @@ resource "aws_ecs_task_definition" "redmine" {
 
       portMappings = [
         { containerPort = 3000, hostPort = 3000, protocol = "tcp" }
+      ]
+
+      mountPoints = [
+        {
+          sourceVolume  = "redmine-files"
+          containerPath = "/usr/src/redmine/files"
+          readOnly      = false
+        }
       ]
 
       environment = [
