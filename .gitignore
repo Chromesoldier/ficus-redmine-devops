@@ -1,0 +1,18 @@
+# Terraform
+**/.terraform/*
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/*.tfstate
+**/*.tfstate.*
+**/crash.log
+**/crash.*.log
+
+# Terraform variables files (often contain secrets)
+**/*.tfvars
+**/*.tfvars.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
