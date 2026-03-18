@@ -1,6 +1,13 @@
 terraform {
   required_version = ">= 1.5.0"
 
+  backend "s3" {
+    bucket         = "ficus-redmine-tfstate-677276108662"
+    key            = "redmine/terraform.tfstate"
+    region         = "eu-west-3"
+    dynamodb_table = "ficus-redmine-tf-lock"
+    encrypt        = true
+  }
   required_providers {
     aws = {
       source  = "hashicorp/aws"
