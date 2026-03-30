@@ -20,3 +20,13 @@ variable "container_image" {
   type    = string
   default = "redmine:latest"
 }
+
+variable "hosted_zone_name" {
+  type    = string
+  default = "jmngk.com"
+}
+
+variable "app_domain_name" {
+  type    = string
+  default = "redmine.jmngk.com"
+}
